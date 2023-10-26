@@ -23,9 +23,17 @@ async def request(url: str):
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
             if response.status == 200:
+                list_pb = []
+                dict_pb = {}
+                key = []
                 r = await response.json()
                 result = r#.json()
-                return print(result)
+                key.append(result["date"])
+                for i in result["exchangeRate"]:
+                    
+                        print(i)
+                
+                return print(key)
             else:
                 return "Error.Приват не відповідає"
 #json.dump(json_dict, f, ensure_ascii=False, indent=4)
@@ -36,6 +44,7 @@ async def get_exchange():
         d = date_now - i
         dt_now = d.strftime('%d.%m.%Y')
         response = await request(f"https://api.privatbank.ua/p24api/exchange_rates?date={dt_now}")
+
 
     #    return str(response) 
 
