@@ -1,6 +1,8 @@
 import asyncio
 import logging
 import argparse
+import json
+import sys
 
 import websockets
 import names
@@ -10,43 +12,56 @@ from websockets import WebSocketServerProtocol
 from websockets.exceptions import ConnectionClosedOK
 
 
+###########  Ввідні дані  #############
 
 parser = argparse.ArgumentParser(description="exchange")
-parser.add_argument("--exchange", "-ex", help="exchange", default=1)
+parser.add_argument("--previous days", "-p", help="previous days", required=True)
+parser.add_argument("--currency", "-c", help="currency", default=['EUR','USD'])
+
 args = vars(parser.parse_args())
-day_ = int(args.get("exchange"))
+
+previous_days = int(args.get("previous days"))
+currencies = args.get("currency")
+print(currencies)
 date_now = date.today()
 
+api_privat = "https://api.privatbank.ua/p24api/exchange_rates?date="
+
+result_api = []
 logging.basicConfig(level=logging.INFO)
+
+
+##############  Клієнт aiohttp  ###############
 
 async def request(url: str):
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
             if response.status == 200:
-                list_pb = []
-                dict_pb = {}
-                key = []
                 r = await response.json()
-                result = r#.json()
-                key.append(result["date"])
-                for i in result["exchangeRate"]:
-                    
-                        print(i)
-                
-                return print(key)
+                return r
             else:
                 return "Error.Приват не відповідає"
 #json.dump(json_dict, f, ensure_ascii=False, indent=4)
 
+##############  Парсер API запитів  ###############
+async def parser_api(response,day):
+    d2 = {}
+    for i in response["exchangeRate"]:
+        if i.get('currency') in  currencies:
+            d1 = {'sale': i.get('saleRateNB'), 'purchase': i.get('purchaseRateNB')}
+            d2.update({i.get('currency'): d1})        
+    return d2
+
+##############  Функція для виконання API запитів  ###############
 async def get_exchange():
-    for i in range(day_):
-        i = timedelta(days=i)
-        d = date_now - i
-        dt_now = d.strftime('%d.%m.%Y')
-        response = await request(f"https://api.privatbank.ua/p24api/exchange_rates?date={dt_now}")
-
-
-    #    return str(response) 
+    for day in range(previous_days):
+        day = timedelta(days = day)
+        date_exchange = date_now - day
+        date_exchange = date_exchange.strftime('%d.%m.%Y')
+        response = await request(f"{api_privat}{date_exchange}")
+        result =  await parser_api(response, day) 
+        dict_date = {response["date"]: result} 
+        result_api.append(dict_date) 
 
 # class Server:
 #     clients = set()
@@ -90,10 +105,16 @@ async def get_exchange():
 #         await asyncio.Future()  # run forever
 
 if __name__ == '__main__':
+
+#############  приклад запуску з командної строки   ################
+############# python main.py -p 2 -c CHF,EUR <<<    ################
     
          #   asyncio.run(main())
-
+    if 1 <= previous_days <= 10:
         asyncio.run(get_exchange())
+        #print(result_api)
+        print(json.dumps(result_api, ensure_ascii=False, indent=4))
+    else:
+        print("Введіть кількість днів для запиту від '1' до '10' ")
+      
 
-
- 
